@@ -41,7 +41,6 @@ function init() {
 
   var h1 = document.createElement('h1'),
     div = document.createElement('div');
-  div.innerHTML = 'Tz-40js';
   div.className = 'footer';
   h1.innerHTML = '飞机大战进化版';
   wrap.appendChild(h1)
