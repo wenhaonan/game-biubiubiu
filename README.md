@@ -4,469 +4,529 @@
 ## 核心源码
 
 ```
-var wrap = document.getElementById("wrap"),
-  speedEnemy = [400, 350, 300, 200],
-  wrapWidth = wrap.clientWidth,
-  wrapHeight = wrap.clientHeight,
-  enePlane = document.getElementsByClassName('enemy'),
-  plane = document.getElementsByClassName("plane"),
-  prize = document.getElementsByClassName('prize'),
-  //存储敌机信息
-  defaultEne = {
-    big: {
-      width: 260,
-      height: 200,
-      strong: 5 // 大家伙的血量
-    },
-    small: {
-      width: 108,
-      height: 80,
-      strong: 1 // 小家伙的血量
-    }
-  },
-  defaultPlane = {
-    big: {
-      width: 97,
-      height: 97,
-      filename: 'plane_1.png'
-    },
-    small: {
-      width: 122,
-      height: 95,
-      filename: 'plane_0.png'
-    }
-  };
+/* 纯原生  v3 性能较好 */
 
+//不同模式的数据
+const data = [{
+  model: "easy",
+  biuSpeed: 6,
+  biuNum: 250,
+  enemyNum: 450,
+  enemySpeed: 2
+}, {
+  model: "dif",
+  biuSpeed: 8,
+  biuNum: 200,
+  enemyNum: 350,
+  enemySpeed: 3
+},
+{
+  model: "hell",
+  biuSpeed: 10,
+  biuNum: 150,
+  enemyNum: 250,
+  enemySpeed: 4
+}];
 
-init() // 初始化界面
+//用到的函数
+const { floor, random, max, min } = Math;
+//主战场
+let
+  battleGround = document.getElementsByClassName('battle-ground')[0],
+  //我的飞机
+  plane = document.getElementsByClassName('my-plane'),
+  //敌机
+  enemy = document.getElementsByClassName('enemy'),
+  //战场左定位
+  battleoffsetleft = battleGround.offsetLeft,
+  //视口的高
+  battleheight = battleGround.offsetHeight,
+  //奖励盒子
+  biuPropDiv = document.getElementsByClassName("biu-prop"),
+  //计分板
+  scoreText = document.querySelector(".score span"),
+  //最高分
+  mostScore = document.querySelector('.most-score span'),
+  //爆炸音效
+  boomAudio = document.getElementsByClassName('boomAudio');
 
+//计分板
+let score = 0;
+
+//初始化
+init()
+
+//初始化界面函数
 function init() {
-  var optArr = ['简单模式', '一般模式', '困难模式', '地狱模式'];
-
-  wrap.innerHTML = "";
-
-  var h1 = document.createElement('h1'),
-    div = document.createElement('div');
-  div.innerHTML = 'Tz-40js';
-  div.className = 'footer';
-  h1.innerHTML = '飞机大战进化版';
-  wrap.appendChild(h1)
-  wrap.appendChild(div)
-
-  for (var i = 0, len = optArr.length; i < len; i++) {
-    var div = document.createElement('div');
-    div.className = 'option';
-    div.innerHTML = optArr[i];
-    div.i = i;
-    div.onclick = function (e) {
-      startGame(this.i, e)
-    }
-    wrap.appendChild(div)
-  }
+  //打扫战场
+  battleGround.innerHTML = ''
+  let startGame = document.createElement('div');
+  startGame.className = 'start-game'
+  battleGround.appendChild(startGame)
+  //历史记录分数
+  mostScore.innerText = (localStorage.getItem("historyScore") ? localStorage.getItem("historyScore") : "无历史最高分")
+  startGame.onclick = modelChoice
 }
 
+//模式选择
+function modelChoice() {
+  battleGround.innerHTML = ''
+  let easy = document.createElement('div');
+  easy.className = 'model';
 
-// startGame 开始游戏
-function startGame(idx, e) {
-  var mod = ['small', 'big', 'small', 'small'];
-  wrap.innerHTML = "";
-  wrap.className = 'bg' + (idx + 1);
-  // 创建敌军函数  
-  wrap.eneTime = setInterval(function () {
-    enemy(idx, mod[randomArea(0, 3)]) // 
-  }, speedEnemy[idx])
+  let diff = easy.cloneNode(),
+    hell = easy.cloneNode();
 
-  // 创建我军函数
-  myPlane(e, idx, 'small')
-
-  // 开启随机生成奖品的功能
-  wrap.prizeTime = setInterval(function () {
-
-    createPrize(['火', '风'][randomArea(0, 1)])
-  }, 5000);
-
-
-  // 开启积分
-  showScore();
-
-  // 开启背景音乐
-  var audio = document.createElement('audio');
-  audio.src = 'img/game_music.mp3';
-  audio.autoplay = true;
-  audio.loop = true;
-  audio.volume = 0.5;
-
-  wrap.appendChild(audio)
-
-}
-
-
-
-// 创建敌军函数
-function enemy(idx, model) {
-  // 敌军
-
-  var ene = document.createElement('div'),
-    bloodBorder = document.createElement('div'),
-    blood = document.createElement('p'),
-    img = document.createElement('img');
-
-  ene.className = 'enemy ' + model;
-  // 预存敌机身份 以便于跟子弹威力进行计算
-  ene.model = model;
-
-  bloodBorder.className = 'blood';
-
-  img.src = 'img/enemy_' + model + '.png';
-
-  img.width = defaultEne[model].width;
-  img.height = defaultEne[model].height;
-
-  // 敌机出生的位置
-  ene.style.top = 0;
-
-  // 敌机威力
-  ene.strong = defaultEne[model].strong;
-
-  // 敌机的下落速度
-  ene.speed = randomArea(2, 4);
-
-  //
-  wrap.appendChild(ene).appendChild(bloodBorder).appendChild(blood);
-  ene.appendChild(img)
-
-
-  ene.style.left = randomArea(0, wrapWidth - ene.clientWidth) + "px"
-
-
-
-
-  eneLanding(); // 敌机生成结束 开始下降
-
-
-  function eneLanding() {
-    ene.style.top = ene.offsetTop + ene.speed + "px";
-    if (ene.offsetTop >= wrapHeight - ene.offsetHeight) {
-      // 到底部时，中途没有发生碰撞，那删除自己
-      wrap.removeChild(ene);
-    } else {
-      // 没有到底部，需要跟我军检测是否碰撞
-      if (plane[0] && isDuang(plane[0], ene)) {
-
-        boom(ene);
-        // 结束游戏
-        // 1: 我军要爆炸
-        // 2：画面要静止
-        gg();
-
-      } else {
-        plane[0] && requestAnimationFrame(eneLanding)
+  easy.innerText = '简单模式';
+  diff.innerText = '困难模式';
+  hell.innerText = '地狱模式';
+  battleGround.appendChild(easy)
+  battleGround.appendChild(diff)
+  battleGround.appendChild(hell)
+  battleGround.style.backgroundImage = 'url(./img/bg.jpg)'
+  easy = diff = hell = null;
+  let whichModel = document.getElementsByClassName('model');
+  //选择模式
+  battleGround.onclick = function (e) {
+    //获取选择难度
+    for (let i = 0; i < whichModel.length; i++) {
+      if (whichModel[i] == e.target) {
+        gameStart(i, e);
+        whichModel = null
+        break;
       }
-
-
     }
   }
-
 }
 
-// 创建我军函数
-function myPlane(e, idx, model) {
-  /*
-  <div class='plane big'>
-  <img src="img/plane_1.png" alt="">
-  </div>
-  */
-  var maxTop, maxLeft, minLeft;
-  var plane = document.createElement('div'),
-    img = document.createElement('img');
+//页面跳转
+function gameStart(model, e) {
+  battleGround.innerHTML = '';
+  battleGround.style.backgroundImage = `url(./img/bg${model}.jpg)`
+  //背景音效
+  let startAudio = document.createElement('audio');
+  startAudio.autoplay = true;
+  startAudio.loop = true;
+  startAudio.volume = 0.5;
+  startAudio.src = './img/game_music.mp3'
+  startAudio.className = 'startAudio'
+  battleGround.appendChild(startAudio)
+  //敌机出现音效
+  let overAudio = startAudio.cloneNode()
+  overAudio.src = './img/enemy_out.mp3';
+  overAudio.className = 'overAudio'
+  battleGround.appendChild(overAudio)
+  //爆炸音效
+  let boomAudio = document.createElement('audio');
+  boomAudio.autoplay = true;
+  boomAudio.volume = 0.8;
+  boomAudio.className = 'boomAudio';
+  battleGround.appendChild(boomAudio)
 
-  img.src = 'img/' + defaultPlane[model].filename;
-  img.width = defaultPlane[model].width;
-  img.height = defaultPlane[model].height;
+  //生成敌机, 我的战机, 子弹奖励, 
+  creatmyPlane(model, e)
+  creatEnmey(model)
+  //参数为生成奖励间隔
+  biuCountAndFire(4000)
+}
 
-  plane.className = "plane " + model;
-  // 用来记录吃了多少增加威力的奖品‘火’
-  plane.strong = 0;
+//生成我方战机
+function creatmyPlane(model, e) {
+  let
+    myPlane = document.createElement('div'),
+    planeBlood = document.createElement('div');
+  myPlane.className = 'my-plane';
+  planeBlood.className = 'my-plane-blood';
+  myPlane.style.cssText = `background-image: url(./img/plane_${model}.png);left: ${e.clientX - battleoffsetleft - 42}; top: ${e.clientY - 33}; cursor: none`;
 
-  // 用来记录 吃了 多少增加子弹条数 的奖品： ‘风’
-  plane.count = 0;
+  myPlane.appendChild(planeBlood)
+  battleGround.appendChild(myPlane)
+  plane[0].count = 1;
+  plane[0].fire = 1;
+  plane[0].blood = 3;
+  //鼠标移动函数
+  movePlane();
+  //生成子弹
+  creatBiu(model)
+  myPlane = null;
+  planeBlood = null;
+}
 
-  plane.model = model;
-
-  wrap.appendChild(plane).appendChild(img);
-
-
-  img.onload = function () {
-    plane.style.top = e.pageY - wrap.offsetTop - plane.clientHeight / 2 + 'px';
-    plane.style.left = e.pageX - wrap.offsetLeft - plane.clientWidth / 2 + 'px';
-
-
-    // 限定我军移动的最大范围
-    maxTop = wrap.clientHeight - plane.offsetHeight,
-      minLeft = -plane.offsetWidth / 2,
-      maxLeft = wrap.clientWidth + minLeft;
-  }
-
-
+//鼠标移动飞机
+function movePlane() {
+  //鼠标移动
+  let
+    left,
+    top;
+  //吃到奖励的音效
+  let chidaole = document.createElement('audio');
+  chidaole.autoplay = true;
+  chidaole.volume = 1;
+  battleGround.appendChild(chidaole)
 
   document.onmousemove = function (e) {
-    var top = e.pageY - wrap.offsetTop - plane.offsetHeight / 2,
-      left = e.pageX - wrap.offsetLeft - plane.offsetWidth / 2;
-
-    top = Math.max(0, top)
-    top = Math.min(maxTop, top)
-    left = Math.max(minLeft, left)
-    left = Math.min(maxLeft, left)
-
-    plane.style.top = top + 'px'
-    plane.style.left = left + 'px';
-
-    // 每次移动时  跟 prize 检测是否发生碰撞（有碰撞就吃掉它）
-
-    for (var i = 0, len = prize.length; i < len; i++) {
-      if (isDuang(plane, prize[i])) {
-        // 撞上了就吃掉它 增加属性
-        if (prize[i].attr === '火') {
-          // 增加威力
-          plane.strong++;
-        } else if (prize[i].attr === '风') {
-          // 增加子弹数量
-          plane.count++;
-
-          if (plane.count > 2) {
-            alert('知足者常乐');
-            gg(); // 游戏结束
-          }
-        }
-        // 移除奖品  关闭奖品自动消失的定时器
-        clearTimeout(prize[i].time)
-        wrap.removeChild(prize[i])
+    if (!plane[0]) return
+    left = e.clientX - battleoffsetleft - 34;
+    top = e.clientY - 26;
+    left = max(left, -4)
+    left = min(left, 408)
+    top = max(top, 0)
+    top = min(top, battleheight - 52)
+    plane[0].style.left = left + 'px';
+    plane[0].style.top = top + 'px'
+    // if (plane[0].count >= 3 && plane[0].fire >= 3) {
+    //   battleGround.removeChild(chidaole)
+    //   chidaole = null;
+    //   return
+    // }
+    if (biuPropDiv[0] && testCrash(biuPropDiv[0], plane[0])) {
+      chidaole.src = './img/chidaoju.mp3'
+      battleGround.removeChild(biuPropDiv[0])
+      switch (plane[0].a) {
+        case 0:
+          plane[0].count++
+          plane[0].count = min(3, plane[0].count)
+          break;
+        case 1:
+          plane[0].fire++
+          plane[0].fire = min(3, plane[0].fire)
+          break;
+        case 2:
+          plane[0].blood++
+          plane[0].firstElementChild.style.backgroundSize = `${plane[0].blood * 33}% 100%`
+          plane[0].blood = min(3, plane[0].blood)
+          break;
       }
     }
-  };
+  }
+}
 
+/* 原生创建 */
 
-  // 生成子弹
-  var speed = [300, 250, 200, 150][idx], //这是不同模式生成子弹的速度
-    biuSpd = [4, 5, 6, 7][idx]; // 子弹移动的速度
-
-
-  var audio = document.createElement('audio');
-  audio.loop = true;
-  audio.autoplay = true;
-  wrap.appendChild(audio)
-
-
-
-
-  plane.time = setInterval(function () {
-    // 0  1  2
-
-    for (var i = 0; i <= plane.count; i++) {
-      Biu({
-        strong: plane.strong,
-        count: plane.count,
-        i: i // 用来确定子弹的left位置
-      })
-
-      audio.src = plane.count > 0 ? 'img/enemy2_out.mp3' : 'img/bullet.mp3';
-
+//生成子弹
+//子弹计时器
+let biuTimer = null;
+function creatBiu(model) {
+  let { biuNum, biuSpeed } = data[model];
+  //我的飞机定位置, 避免后边重复查询
+  let planeLeft = '';
+  biuTimer = setInterval(() => {
+    //如果坠机
+    if (!plane[0]) return
+    //有几个子弹就生成几个
+    for (let i = 0; i < plane[0].count; i++) {
+      creat(i)
     }
+    function creat(i) {
+      let biu = document.createElement('div');
+      biu.style.top = `${plane[0].offsetTop - 30}px`
+      planeLeft = plane[0].offsetLeft;
+      //根据子弹数量动态改变子弹的位置
+      switch (plane[0].count) {
+        case 1:
+          biu.style.left = `${planeLeft + 19}px`
+          break;
+        case 2:
+          biu.style.left = [`${planeLeft}px`, `${planeLeft + 38}px`][i]
+          break;
+        case 3:
+          biu.style.left = [`${planeLeft}px`, `${planeLeft + 19}px`, `${planeLeft + 38}px`][i]
+          break;
+      }
+      biu.className = 'biu-biu'
+      //子弹威力
+      biu.fire = plane[0].fire
+      battleGround.appendChild(biu)
 
-
-  }, speed)
-
-  function Biu(obj) {
-    var biu = document.createElement('img');
-    biu.src = 'img/fire.png';
-    biu.className = 'biu strong1';
-    biu.strong = 1 + plane.strong; // 子弹的威力
-    biu.count = 1 + plane.count; // 子弹的条数
-
-    wrap.appendChild(biu);
-    biu.style.top = plane.offsetTop + 'px';
-
-
-    if (obj.count === 0) {
-      // 中间 
-      biu.style.left = plane.offsetLeft + plane.offsetWidth / 2 - biu.offsetWidth / 2 + "px";
-    } else if (obj.count === 1) {
-      // 左边 右边
-      biu.style.left = [plane.offsetLeft, plane.offsetLeft + plane.offsetWidth - biu.offsetWidth][obj.i] + 'px';
-    } else if (obj.count === 2) {
-      // 左边 中间 右边
-      biu.style.left = [plane.offsetLeft, plane.offsetLeft + plane.offsetWidth / 2 - biu.offsetWidth / 2, plane.offsetLeft + plane.offsetWidth - biu.offsetWidth][obj.i] + 'px';
-    }
-    runBiu();
-
-    function runBiu() {
-      biu.style.top = biu.offsetTop - biuSpd + "px";
-      if (biu.offsetTop <= 0) {
-        wrap.removeChild(biu);
-      } else {
-
-        // 检测跟敌军的身体  是否发生碰撞
-        plane.parentNode && (biu.time = requestAnimationFrame(runBiu))
-
-        for (var i = 0, len = enePlane.length; i < len; i++) {
-
-          if (enePlane[i] && isDuang(biu, enePlane[i])) {
-
-            cancelAnimationFrame(biu.time)
-            // 删除子弹
-            wrap.removeChild(biu);
-            enePlane[i].strong -= biu.strong;
-            // 被击中的飞机 血量减少
-
-            enePlane[i].children[0].children[0].style.width = enePlane[i].strong / defaultEne[enePlane[i].model].strong * enePlane[i].children[0].clientWidth + "px";
-
-            if (enePlane[i].strong <= 0) {
-              if (enePlane[i].model === 'small') {
-                wrap.score++;
-              } else if (enePlane[i].model === 'big') {
-                wrap.score += 4;
-
+      biuRun()
+      function biuRun() {
+        biu.style.top = biu.offsetTop - biuSpeed + "px";
+        if (biu.offsetTop <= 0) {
+          battleGround.removeChild(biu)
+          biu = null;
+        } else {
+          //飞机碰撞检测
+          for (let i = 0; i < enemy.length; i++) {
+            if (enemy[i] && testCrash(enemy[i], biu)) {
+              enemy[i].blood -= biu.fire;
+              //血条消失术
+              enemy[i].firstElementChild.style.backgroundSize = `${(enemy[i].blood * 50)}% 100%`
+              battleGround.removeChild(biu)
+              biu = null
+              //飞机没血了
+              if (enemy[i].blood <= 0) {
+                score += (enemy[i].type == 1) ? 10000 : 5000;
+                boom(enemy[i], enemy[i].type)
+                scoreText.innerHTML = score
               }
-              boom(enePlane[i]);
-
-              document.getElementsByClassName('score')[0].innerHTML = wrap.score;
+              //只要碰撞就return 不用取消 动画帧  不用担心子弹消失
+              return
             }
-
-
           }
+          requestAnimationFrame(biuRun)
         }
-
-
-
       }
     }
+  }, biuNum);
+}
 
 
+//生成敌方战机
+//敌机计时器
+let enemyTimer = null;
+function creatEnmey(model) {
+  let { enemyNum, enemySpeed } = data[model],
+    //难度不同, 生成大飞机的概率不同
+    bigPro = 4 - model;
+
+  enemyTimer = setInterval(() => {
+    if (!plane[0]) return
+    let left = randomNum(0, 420);
+    let enemy = document.createElement('div');
+    let blood = document.createElement('div');
+    enemy.style.cssText = `top: ${-40}px;left: ${left}px`;
+    blood.className = 'blood';
+    //大小飞机
+    if ((randomNum(0, bigPro) == 0)) {
+      enemy.classList = 'enemy-big enemy';
+      enemy.blood = 3;
+      //1是大飞机  用来判断飞机大小
+      enemy.type = 1
+    } else {
+      enemy.classList = 'enemy-small enemy';
+      enemy.blood = 2;
+      //1是小飞机
+      enemy.type = 0
+    }
+    enemy.appendChild(blood)
+    battleGround.appendChild(enemy)
+    blood = null
+
+    //敌机运动
+    enemyRun()
+    //大飞机子弹运动  left 固定, 传进去
+    enemyBiu(enemy, left)
+    left = null
+
+    function enemyRun() {
+      //用来检测飞机有没有坠毁, 要不然会一直调用下去,  哈哈哈 ! 终于想到了!!
+      if (!enemy.parentElement) {
+        enemy = null;
+        return
+      }
+
+      enemy.style.top = enemy.offsetTop + enemySpeed + "px";
+      //消失提前一点
+      if (enemy.offsetTop >= battleheight - 40) {
+        battleGround.removeChild(enemy);
+        enemy = null
+      } else {
+        if (plane[0] && testCrash(enemy, plane[0])) {
+          myPlaneBoom(enemy, true)
+          enemy = null;
+          return
+        }
+        requestAnimationFrame(enemyRun)
+      }
+    }
+  }, enemyNum);
+}
+
+//飞机扣血函数  参数 : 目标,  是否是敌机 true 是敌机 false 是敌机子弹
+function myPlaneBoom(enemy, bol) {
+  plane[0].blood--;
+  plane[0].firstElementChild.style.backgroundSize = `${plane[0].blood * 33}% 100%`;
+  boomAudio[0].src = "./img/game_over.mp3";
+  //敌机爆炸 或者是 大飞机子弹消失
+  bol ? boom(enemy, enemy.type) : battleGround.removeChild(enemy)
+
+  if (plane[0].blood > 0) return
+  //我方爆炸, 游戏结束
+  boom(plane[0], true, gameOver)
+}
+
+//大飞机子弹函数
+function enemyBiu(enemy, left) {
+  //小飞机返回
+  if (enemy.type == 0 || !enemy.parentElement) return
+  if (!plane[0]) return
+
+  let
+    eB = document.createElement('div'),
+    randomS = randomNum(-2, 2);
+  eB.className = 'enemy-biu';
+  eB.style.cssText = `left:${left}px; top:${enemy.offsetTop}px`;
+  battleGround.appendChild(eB);
+
+  enemyBiuRun()
+  function enemyBiuRun() {
+    if (!eB.parentElement) {
+      eB = null;
+      return
+    }
+    eB.style.top = eB.offsetTop + 5 + 'px';
+    eB.style.left = eB.offsetLeft + randomS + 'px';
+
+    //消失提前
+    if (eB.offsetTop >= battleheight - 23 || eB.offsetLeft <= 0 || eB.offsetLeft >= 451) {
+      battleGround.removeChild(eB)
+      randomS = null;
+      eB = null
+    } else {
+      if (plane[0] && testCrash(eB, plane[0])) {
+        //敌机子弹, 第二个传输不传
+        myPlaneBoom(eB);
+        randomS = null;
+        eB = null;
+        return
+      }
+      requestAnimationFrame(enemyBiuRun)
+    }
   }
 }
 
-function boom(obj) {
-  var img = document.createElement('img');
-  img.src = 'img/boom_' + obj.model + '.png';
-  img.width = obj.clientWidth;
-  img.height = obj.clientHeight;
-  img.className = 'boom';
-  img.style.top = obj.offsetTop + "px";
-  img.style.left = obj.offsetLeft + "px";
+//原生检测
+function testCrash(a, b) {
+  if (!a || !b) return false
+  var aTop = a.offsetTop,
+    aLeft = a.offsetLeft,
+    aRight = aLeft + a.offsetWidth,
+    aBottom = aTop + a.offsetHeight,
+    bTop = b.offsetTop,
+    bLeft = b.offsetLeft,
+    bRight = bLeft + b.offsetWidth,
+    bBottom = bTop + b.offsetHeight;
+  let bol = !(aTop > bBottom || aLeft > bRight || aBottom < bTop || aRight < bLeft);
+  aTop = aLeft = aRight = aBottom = bTop = bLeft = bRight = bBottom = null;
+  return bol
+}
 
+//奖励生成函数
+//奖励计时器
+let biuCountAndFireTimer = null;
+function biuCountAndFire(time) {
+  biuCountAndFireTimer = setInterval(() => {
+    //上限为3个
+    if (plane[0].count >= 3 && plane[0].fire >= 3 && plane[0].blood >= 3) return;
+    let
+      biuProp = document.createElement('div'),
+      randomN = randomNum(0, 2),
+      bgI = '';
+    biuProp.className = 'biu-prop';
+    switch (randomN) {
+      case 0:
+        bgI = 'url(./img/biucount.png)'
+        //0是加子弹
+        plane[0].a = 0
+        break;
+      case 1:
+        bgI = 'url(./img/biufire.png)'
+        //1是加威力
+        plane[0].a = 1
+        break;
+      case 2:
+        //2是加血
+        bgI = 'url(./img/addblood.png)'
+        plane[0].a = 2
+        break;
+    }
+    biuProp.style.cssText = `top: ${randomNum(0, battleheight - 40)}px;left: ${randomNum(0, 435)}px;background-image: ${bgI}`;
+    bgI = null;
+    battleGround.appendChild(biuProp)
+    //奖励消失
+    setTimeout(() => {
+      //如果没被吃的话, 删除节点
+      if (biuProp.parentElement) {
+        battleGround.removeChild(biuProp)
+      }
+      biuProp = null
+      randomN = null
+    }, 1500);
+  }, time);
+}
 
-  wrap.removeChild(obj);
+//爆炸函数  true是bigboom
+function boom(enemy, bol, fn) {
+  //如果有传gameover 先清空定时器, 以免出错
+  if (fn) {
+    clearInterval(enemyTimer)
+    clearInterval(biuTimer)
+    clearInterval(biuCountAndFireTimer)
+  }
 
+  let
+    left = enemy.offsetLeft,
+    top = enemy.offsetTop;
+  battleGround.removeChild(enemy)
 
-  wrap.appendChild(img);
-  // css的animation动画执行结束
-  img.addEventListener('webkitAnimationEnd', function () {
-    wrap.removeChild(this)
+  let boomDiv = document.createElement('div')
+  boomDiv.className = bol ? 'boom-big' : 'boom-small';
+  boomDiv.style.cssText = `left:${left}px; top:${top}px`;
+  battleGround.appendChild(boomDiv)
+  //动画结束
+  boomDiv.addEventListener('webkitAnimationEnd', () => {
+    battleGround.removeChild(boomDiv)
+    left = top = boomDiv = null;
+    fn && fn()
   })
-
-  var audio = document.createElement('audio');
-  audio.loop = false;
-  audio.autoplay = true;
-  audio.src = obj.className === 'enemy' ? 'img/enemy3_down.mp3' : 'img/game_over.mp3'
-  audio.volume = 0.5;
-
-  audio.addEventListener('ended', function () {
-    wrap.removeChild(this);
-  });
-
-  wrap.appendChild(audio)
+  //jq的淡出
+  // $boom.fadeOut(2000, function () {
+  //   this.remove()
+  //   pos = left = top = $boom = null
+  //   fn && fn()
+  // })
 }
 
-
-function isDuang(obj1, obj2) { // true 碰撞  false 不碰撞
-  var top1 = obj1.offsetTop,
-    left1 = obj1.offsetLeft,
-    right1 = left1 + obj1.offsetWidth,
-    bottom1 = top1 + obj1.offsetHeight,
-
-    top2 = obj2.offsetTop,
-    left2 = obj2.offsetLeft,
-    right2 = left2 + obj2.offsetWidth,
-    bottom2 = top2 + obj2.offsetHeight;
-
-  return !(top1 > bottom2 || left1 > right2 || bottom1 < top2 || right1 < left2)
-}
-
-
-// random [0,20]   5 , 17  [5,17]    [0,1)*13 = [0,13) + 5 = [5,17]
-function randomArea(a, b) {
-  return Math.floor(Math.random() * (b + 1 - a) + a);
-}
-
-// GG 游戏结束
-function gg() {
-  // 注销document的move事件
-  document.onmousemove = null;
-  // 关闭生产敌军的定时器
-  clearInterval(wrap.eneTime)
-  // 关闭生成子弹的定时器
-  clearInterval(plane[0].time)
-  // 清除生成奖品的定时器
-  clearInterval(wrap.prizeTime)
-  // 我军的爆炸效果 && 删除我军
-  boom(plane[0])
-  // 统计得分情况
-  setTimeout(ggView, 1000)
-}
-//  火 = 增加威力   风 = 增加子弹的条数
-
-function createPrize(inner) {
-  var div = document.createElement('div');
-  div.innerHTML = inner;
-  div.className = 'prize';
-  // js对象的自定义属性来标记吃的是啥
-  div.attr = inner;
-
-  div.style.top = randomArea(0, wrapHeight - 50) + 'px';
-  div.style.left = randomArea(0, wrapWidth - 50) + 'px';
-
-  wrap.appendChild(div);
-  div.time = setTimeout(function () {
-    wrap.removeChild(div)
-  }, 5000)
-}
-
-
-// ggView
-// wrap.score += 1;
-// wrap.score += 4;
-function ggView() {
-  // 清屏
-  wrap.innerHTML = "";
-  // 创建游戏结束画面的两个对象
-  /*
-  <div class="record">最终得分：<p>1000</p></div>
-  <div class="btn">再来一次</div> 
-  */
-  var div = document.createElement('div'),
-    div2 = document.createElement('div');
-
-  div.className = 'record';
-  div.innerHTML = "最终得分：<p>" + wrap.score + "</p>"
-  div2.className = "btn";
-  div2.innerHTML = '再来一次';
-  div2.onclick = function () {
-    init();
+//游戏结束
+function gameOver() {
+  //清除定时器
+  clearInterval(enemyTimer)
+  clearInterval(biuTimer)
+  clearInterval(biuCountAndFireTimer)
+  //清理战场
+  battleGround.innerHTML = ''
+  //重新开始
+  oneMore()
+  //记录分数
+  if (score > localStorage.getItem("historyScore")) {
+    localStorage.setItem("historyScore", `${score}`)
+    mostScore.innerText = score;
+    score = 0
   }
-  wrap.appendChild(div)
-  wrap.appendChild(div2)
-
-
 }
 
-// showScore  初始化开始几分
-function showScore() {
-
-  var span = document.createElement('span');
-  span.innerHTML = wrap.score = 0;
-  span.className = 'score';
-  wrap.appendChild(span);
-
+//再来一局
+function oneMore() {
+  battleGround.style.backgroundImage = "url(./img/over.jpg)"
+  let
+    more = document.createElement('div'),
+    lastscore = document.createElement('div');
+  more.className = 'more';
+  lastscore.className = 'last-score';
+  lastscore.innerText = score
+  battleGround.appendChild(more)
+  battleGround.appendChild(lastscore)
+  lastscore = null
+  more.onclick = modelChoice
 }
 
+//esc退出
+document.onkeydown = function (e) {
+  if (e.keyCode != 27) return
+  if (!plane[0]) return
+  document.getElementsByClassName('overAudio')[0].src = "./img/game_over.mp3";
+  boom(plane[0], true, gameOver)
+}
+
+//只有视口大小
+window.onresize = () => {
+  battleoffsetleft = battleGround.offsetLeft;
+  battleheight = battleGround.offsetHeight;
+}
+
+//随机数
+function randomNum(a, b) {
+  let val = Math.floor(Math.random() * (b + 1 - a) + a);
+  return val;
+}
 ```
