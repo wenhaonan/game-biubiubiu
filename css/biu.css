@@ -1,0 +1,195 @@
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      background: #ccc;
+      overflow: hidden;
+    }
+
+    .battle-ground {
+      width: 474px;
+      height: 722px;
+      background-image: url(../img/bg.jpg);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      position: absolute;
+      left: calc(50% - 237px);
+      text-align: center;
+    }
+
+    .start-game {
+      position: absolute;
+      width: 189px;
+      height: 62px;
+      background-image: url(../img/start.png);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      top: 500px;
+      left: calc(50% - 94px);
+      cursor: pointer;
+    }
+
+    .model {
+      width: 200px;
+      height: 50px;
+      line-height: 50px;
+      font-size: 30px;
+      color: #000;
+      background: #fff;
+      border-radius: 15px;
+      font-weight: bold;
+      margin: 80px auto;
+      cursor: pointer;
+    }
+
+    .model:first-child {
+      margin-top: 300px
+    }
+
+    .model:hover {
+      background: #f40;
+      color: #fff
+    }
+
+    .my-plane {
+      position: absolute;
+      width: 68px;
+      height: 52px;
+      background-size: 100% 100%
+    }
+
+    .biu-biu {
+      position: absolute;
+      width: 30px;
+      height: 60px;
+      background-image: url(../img/fire.png);
+      background-size: 100% 100%;
+    }
+
+    .enemy-small {
+      position: absolute;
+      width: 54px;
+      height: 40px;
+      background-image: url(../img/enemy_small.png);
+      background-size: 100% 100%;
+    }
+
+    .enemy-big {
+      position: absolute;
+      width: 54px;
+      height: 40px;
+      background-image: url(../img/enemy_big.png);
+      background-size: 100% 100%;
+    }
+
+    
+    .most-score {
+      position: absolute;
+      top: 0;
+      width: 400px;
+      height: 50px;
+      line-height: 50px;
+      color: #000;
+      font-size: 30px;
+    }
+    .score {
+      position: absolute;
+      top: 60px;
+      width: 400px;
+      height: 50px;
+      line-height: 50px;
+      color: #000;
+      font-size: 30px;
+    }
+
+    .esc{
+      position: absolute;
+      top: 200px;
+      left: 100px;
+      width: 400px;
+      height: 50px;
+      line-height: 50px;
+      color: #000;
+      font-size: 30px;
+    }
+
+    @keyframes a {
+        from{
+          opacity: 1;
+        }
+        to{
+          opacity: 0;
+        }
+    }
+
+    .boom-small {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      background: url(../img/boom_small.png) 100% 100% no-repeat;
+      animation: a 1s
+    }
+
+    .boom-big {
+      position: absolute;
+      width: 76px;
+      height: 76px;
+      background: url(../img/boom_big.png) 100% 100% no-repeat;
+      animation: a 1s
+    }
+
+    
+    .more {
+      position: absolute;
+      width: 189px;
+      height: 62px;
+      background-image: url(../img/restart.png);
+      background-size: 100% 100%;
+      bottom: 20px;
+      left: calc(50% - 94px);
+      cursor: pointer;
+    }
+
+    .last-score{
+      position: absolute;
+      font-size: 40px;
+      color: #ccc;
+      bottom: 230px;
+      width: 400px;
+      height: 50px;
+      line-height: 50px;
+      text-align: center
+    }
+
+    .biu-prop{
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-size: 100% 100%;
+    }
+
+    .enemy-biu{
+      position: absolute;
+      width: 23px;
+      height: 23px;
+      background-image: url(../img/enemyBiu.png);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+    }
+    
+    .blood,
+    .my-plane-blood
+    {
+      position: absolute;
+      top: -20px;
+      width: 54px;
+      height: 6px;
+      border: 1px solid #f35c0c;
+      background-image: url(../img/lifeBar.png);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+    }
+
+    .my-plane-blood{
+      left: 7px
+    }

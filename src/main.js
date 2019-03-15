@@ -85,7 +85,7 @@ function startGame(idx, e) {
   // 开启背景音乐
   var audio = document.createElement('audio');
   audio.src = 'img/game_music.mp3';
-  audio.autoplay = true;
+  //audio.autoplay = true;
   audio.loop = true;
   audio.volume = 0.5;
 
@@ -152,10 +152,7 @@ function enemy(idx, model) {
         // 2：画面要静止
         gg();
 
-      } else {
-        plane[0] && requestAnimationFrame(eneLanding)
-      }
-
+      } 
 
     }
   }
